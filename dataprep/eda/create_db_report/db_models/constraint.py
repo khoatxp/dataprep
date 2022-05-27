@@ -2,12 +2,12 @@ from .table import Table
 
 
 class ForeignKeyConstraint:
-    imported_key_cascade = 0
-    imported_key_restrict = 1
-    imported_key_set_null = 2
-    imported_key_no_action = 3
+    imported_key_cascade = "0"
+    imported_key_restrict = "1"
+    imported_key_set_null = "2"
+    imported_key_no_action = "3"
 
-    def __init__(self, child: Table, name: str, delete_rule: str, update_rule: int):
+    def __init__(self, child: Table, name: str, delete_rule: str, update_rule: str):
         self.name = name
         self.child_table = child
         self.delete_rule = delete_rule
@@ -84,3 +84,9 @@ class ForeignKeyConstraint:
             constraints.extend(table.get_foreign_keys())
 
         return constraints
+
+
+class ImpliedForeignKeyConstraint(ForeignKeyConstraint):
+    def __init__(self, child: Table, parent: Table):
+        ForeignKeyConstraint.__init__(self, child, "Implied Constraint", self.imported_key_no_action, self.imported_key_no_action)
+        self.parent_table = parent

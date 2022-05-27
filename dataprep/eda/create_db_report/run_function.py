@@ -179,7 +179,7 @@ def parse_constraints(current_database: Database, json_table_dict: Dict[str, Any
                 parent_column = existing_tables[parent_table].get_column(parent_col.upper())
                 delete_constraint = constraints[current_constraint]["delete_rule"]
                 new_fk = ForeignKeyConstraint(
-                    current_table, current_constraint, delete_constraint, 0
+                    current_table, current_constraint, delete_constraint, "0"
                 )
                 new_fk.add_child_column(current_column)
                 new_fk.add_parent_column(parent_column)
