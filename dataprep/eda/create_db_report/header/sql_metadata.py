@@ -50,6 +50,7 @@ def plot_mysql_db(sql_engine: Engine):
     overview_dict["table_names"] = table_list
     overview_dict["num_of_views"] = len(view_list)
     overview_dict["view_names"] = view_list
+    overview_dict["connection_url"] = str(sql_engine.url)
     overview_dict["tables_no_index"] = list(
         table_sql[
             ~table_sql["table_name"].isin(
@@ -65,6 +66,7 @@ def plot_mysql_db(sql_engine: Engine):
     overview_dict["table_schema"] = dict(zip(table_sql["table_name"], table_sql["schemaname"]))
     overview_dict["view_schema"] = dict(zip(view_sql["view_name"], view_sql["schemaname"]))
     overview_dict["product_version"] = version_sql["version()"].values[0]
+    print(overview_dict)
     # Stats for column level stats
     all_cols = pd.read_sql(
         """SELECT concat_ws('.', table_schema, table_name) AS table_name, COLUMN_name AS col_name, COLUMN_TYPE AS type,
@@ -230,6 +232,7 @@ WHERE v.schemaname != 'pg_catalog' AND v.schemaname != 'information_schema' AND 
     overview_dict["table_names"] = table_list
     overview_dict["num_of_views"] = len(view_list)
     overview_dict["view_names"] = view_list
+    overview_dict["connection_url"] = postgres_engine.url
     overview_dict["tables_no_index"] = list(
         table_sql[table_sql["hasindexes"] == False]["table_name"]
     )
@@ -459,6 +462,7 @@ def plot_sqlite_db(sqliteConnection: Engine, analyze: bool = False):
     overview_dict["table_names"] = table_list
     overview_dict["num_of_views"] = int(len(view_list))
     overview_dict["view_names"] = view_list
+    overview_dict["connection_url"] = sqliteConnection.url
     overview_dict["view_schema"] = dict([(x, "sakila") for x in view_list])
     overview_dict["tables_no_index"] = list(
         table_sql[~table_sql["table_name"].isin(set(pk_sql["table_name"]))]["table_name"]

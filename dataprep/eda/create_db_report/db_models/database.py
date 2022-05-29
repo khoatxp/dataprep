@@ -20,5 +20,8 @@ class Database:
     def get_tables(self):
         return self.tables.values()
 
+    def get_tables_dict(self):
+        return self.tables
+
     def get_views(self):
         return self.views.values()

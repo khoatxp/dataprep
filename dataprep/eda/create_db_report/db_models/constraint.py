@@ -9,12 +9,12 @@ class ForeignKeyConstraint:
 
     def __init__(self, child: Table, name: str, delete_rule: str, update_rule: str):
         self.name = name
-        self.child_table = child
         self.delete_rule = delete_rule
         self.update_rule = update_rule
         self.parent_columns = []
         self.child_columns = []
         self.parent_table = None
+        self.child_table = child
 
     def add_parent_column(self, column):
         if column is not None:
@@ -24,6 +24,12 @@ class ForeignKeyConstraint:
     def add_child_column(self, column):
         if column is not None:
             self.child_columns.append(column)
+
+    def get_parent_table(self):
+        return self.parent_table
+
+    def get_child_table(self):
+        return self.child_table
 
     def is_cascade_on_delete(self):
         return self.delete_rule == self.imported_key_cascade
@@ -88,5 +94,11 @@ class ForeignKeyConstraint:
 
 class ImpliedForeignKeyConstraint(ForeignKeyConstraint):
     def __init__(self, child: Table, parent: Table):
-        ForeignKeyConstraint.__init__(self, child, "Implied Constraint", self.imported_key_no_action, self.imported_key_no_action)
+        ForeignKeyConstraint.__init__(
+            self,
+            child,
+            "Implied Constraint",
+            self.imported_key_no_action,
+            self.imported_key_no_action,
+        )
         self.parent_table = parent

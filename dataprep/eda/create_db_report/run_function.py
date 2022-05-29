@@ -1,6 +1,7 @@
 import os
 import json
 from typing import Any, Dict
+from setuptools import Command
 from sqlalchemy.engine.base import Engine
 from .db_models.db_meta import DbMeta
 from .db_models.database import Database
@@ -14,6 +15,7 @@ from .views.main import MainPage
 from .views.column import ColumnPage
 from .views.constraint import ConstraintPage
 from .views.table import TablePage
+from .output.diagrams.diagram_factory import DiagramFactory
 from .header.sql_metadata import plot_mysql_db, plot_postgres_db, plot_sqlite_db
 
 
@@ -39,6 +41,7 @@ def parse_database(engine_name: str, database_name: str, json_overview_dict: Dic
         json_overview_dict["num_of_pk"],
         json_overview_dict["num_of_tables"],
         json_overview_dict["product_version"],
+        json_overview_dict["connection_url"],
     )
     current_database = Database(database_name, json_overview_dict["schema_names"], metadata)
     return metadata, current_database
@@ -174,9 +177,9 @@ def parse_constraints(current_database: Database, json_table_dict: Dict[str, Any
             elif constraints[current_constraint]["constraint_type"].upper() == "FOREIGN KEY":
                 column_id = str(constraints[current_constraint]["col_name"]).upper().strip()
                 current_column = current_table.get_column(column_id)
-                parent_table = constraints[current_constraint]["ref_table"]
-                parent_col = constraints[current_constraint]["ref_col"]
-                parent_column = existing_tables[parent_table].get_column(parent_col.upper())
+                parent_table = existing_tables[constraints[current_constraint]["ref_table"]]
+                parent_column_name = constraints[current_constraint]["ref_col"]
+                parent_column = parent_table.get_column(parent_column_name.upper())
                 delete_constraint = constraints[current_constraint]["delete_rule"]
                 new_fk = ForeignKeyConstraint(
                     current_table, current_constraint, delete_constraint, "0"
@@ -185,6 +188,7 @@ def parse_constraints(current_database: Database, json_table_dict: Dict[str, Any
                 new_fk.add_parent_column(parent_column)
                 current_column.add_parent(parent_column, new_fk)
                 parent_column.add_child(current_column, new_fk)
+                parent_table.add_referenced_by_table(current_table)
                 current_table.add_foreign_key(new_fk)
 
 
@@ -271,5 +275,10 @@ def generate_db_report(sql_engine: Engine, analyze: bool = False):
     report_output_file = main_page.page_writer(
         current_database, current_database.get_tables(), file
     )
+
+    file = str(os.path.realpath(os.path.join(os.path.dirname(__file__), "output")))
+    diagram_generator = DiagramFactory(file)
+    diagram_generator.generate_summary_diagram()
+    diagram_generator.generate_table_diagrams(current_database)
 
     return database_name, report_output_file
