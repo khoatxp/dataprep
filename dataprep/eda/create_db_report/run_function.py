@@ -276,9 +276,8 @@ def generate_db_report(sql_engine: Engine, analyze: bool = False):
         current_database, current_database.get_tables(), file
     )
 
-    file = str(os.path.realpath(os.path.join(os.path.dirname(__file__), "output")))
+    file = str(os.path.realpath(os.path.join(os.path.dirname(__file__), "layout")))
     diagram_generator = DiagramFactory(file)
-    diagram_generator.generate_summary_diagram()
-    diagram_generator.generate_table_diagrams(current_database)
+    diagram_generator.generate_table_diagrams(current_database, str(sql_engine.url))
 
     return database_name, report_output_file

@@ -1,18 +1,12 @@
-from .diagram_results import DiagramResults
-from ...db_models.database import Database
 import os
-import subprocess
-
-
-# I'm trying to generate those diagrams and put in format like we have for the output folder of schemaspy
-# So from eralchemy you can specify mode in render_er function to generate either graph or dot file.
-# We want graph and dot file for each of the tables
-# We also want the logic for handling error when generating diagrams
-# Frontend might have some logic to handle compact, so we want to remove that, and we have to change the syntax of the html from mustache to jinja too
+import shutil
+from eralchemy import render_er
+from ...db_models.database import Database
 
 
 class DiagramFactory:
     def __init__(self, output_dir: str):
+        self.cwd = os.getcwd()
         self.diagram_dir = output_dir + "/diagrams"
         self.dirs = {
             "table": self.diagram_dir + "/tables",
@@ -22,54 +16,34 @@ class DiagramFactory:
         self.create_dirs()
 
     def create_dirs(self):
+        if not os.path.exists(self.diagram_dir):
+            os.mkdir(self.diagram_dir)
         for path in self.dirs:
-            try:
-                os.mkdir(self.dirs[path])
-                print("createdddddddddddd")
-            except OSError as error:
-                continue
+            if os.path.exists(self.dirs[path]) and os.path.isdir(self.dirs[path]):
+                shutil.rmtree(self.dirs[path])
+            os.mkdir(self.dirs[path])
 
     @staticmethod
-    def generate_summary_diagram(database_url=None, dot_file_name=None, diagram_file_name=None):
-        cmd = "eralchemy -i 'mysql+pymysql://root:password@localhost:3306/classicmodels'  -o erd_froms_sqlite.dot"
-        cmd2 = "eralchemy -i 'mysql+pymysql://root:password@localhost:3306/classicmodels'  -o erd_froms_sqlite.png"
-        subprocess.call(
-            cmd, shell=True, cwd="dataprep/eda/create_db_report/output/diagrams/summary"
-        )
-        subprocess.call(
-            cmd2, shell=True, cwd="dataprep/eda/create_db_report/output/diagrams/summary"
-        )
+    def generate_summary_diagram(database_url, file_name):
+        render_er(database_url, f"{file_name}.png")
+        render_er(database_url, f"{file_name}.dot")
 
-    @staticmethod
-    def generate_table_diagrams(database_object: Database):
-        cmd3 = "eralchemy -i 'mysql+pymysql://root:password@localhost:3306/classicmodels' -o {file_name}.dot --exclude-tables {table_names}"
-        cmd4 = "eralchemy -i 'mysql+pymysql://root:password@localhost:3306/classicmodels' -o {file_name}.png --exclude-tables {table_names}"
+    def generate_table_diagrams(self, database_object: Database, database_url: str):
         database_tables = database_object.get_tables_dict()
         table_names = set(database_tables.keys())
         for table in table_names:
-            related_table_names = set()
-            related_table_names.add(table)
-            ref = database_tables[table].get_referenced_by_tables()
-            for j in ref:
-                related_table_names.add(j)
-            table_foreignkeys = database_tables[table].get_foreign_keys_dict()
-            for foreign_key in table_foreignkeys:
+            related_table_names = set(table)
+            related_table_names.update(database_tables[table].get_referenced_by_tables())
+            table_foreign_keys = database_tables[table].get_foreign_keys_dict()
+            for foreign_key in table_foreign_keys:
                 related_table_names.add(
-                    table_foreignkeys[foreign_key].get_parent_table().get_name()
+                    table_foreign_keys[foreign_key].get_parent_table().get_name()
                 )
-            print("TABLE NAME: ", table)
-            print("RELATED TBALES: ", related_table_names)
-            filter_tables = list(table_names - related_table_names)
-            filter_tables_string = " ".join(x for x in filter_tables)
-            print(filter_tables_string)
-            cmd3 = cmd3.format(file_name=table, table_names=filter_tables_string)
-            cmd4 = cmd4.format(file_name=table, table_names=filter_tables_string)
-            subprocess.call(
-                cmd3, shell=True, cwd="dataprep/eda/create_db_report/output/diagrams/tables"
-            )
-            subprocess.call(
-                cmd4, shell=True, cwd="dataprep/eda/create_db_report/output/diagrams/tables"
-            )
+            exclude_tables = " ".join(list(table_names - related_table_names))
+            os.chdir(self.dirs['table'])
+            render_er(database_url, f"{table}.png", exclude_tables=exclude_tables)
+            render_er(database_url, f"{table}.dot", exclude_tables=exclude_tables)
+            os.chdir(self.cwd)
 
 
 """
